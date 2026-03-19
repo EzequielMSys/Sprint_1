@@ -1,6 +1,60 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const usuarioModel = require('../models/usuarioModel');
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Registrar novo usuário
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nome
+ *               - email
+ *               - senha
+ *             properties:
+ *               nome:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               senha:
+ *                 type: string
+ *               tipo:
+ *                 type: string
+ *                 enum: [aluno, admin]
+ *     responses:
+ *       201:
+ *         description: Usuário criado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 usuario:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     nome:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     tipo:
+ *                       type: string
+ *       400:
+ *         description: Campos obrigatórios faltando
+ *       409:
+ *         description: Email já cadastrado
+ *       500:
+ *         description: Erro interno
+ */
 async function registrar(req, res) {
   try {
     const { nome, email, senha, tipo } = req.body;
@@ -33,6 +87,56 @@ async function registrar(req, res) {
     return res.status(500).json({ message: 'Erro interno ao registrar usuário.' });
   }
 }
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login de usuário
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - senha
+ *             properties:
+ *               email:
+ *                 type: string
+ *               senha:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 usuario:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     nome:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     tipo:
+ *                       type: string
+ *       400:
+ *         description: Campos obrigatórios faltando
+ *       401:
+ *         description: Credenciais inválidas
+ *       500:
+ *         description: Erro interno
+ */
 async function login(req, res) {
   try {
     const { email, senha } = req.body;
