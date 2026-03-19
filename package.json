@@ -1,0 +1,21 @@
+{
+    "name": "plataforma-estudos-inteligente",
+    "version": "1.0.0",
+    "description": "Plataforma educacional inteligente para organização de estudos (TCC).",
+    "main": "src/server.js",
+    "scripts": {
+      "start": "node src/server.js",
+      "dev": "nodemon src/server.js"
+    },
+    "dependencies": {
+      "bcrypt": "^5.1.0",
+      "cors": "^2.8.5",
+      "dotenv": "^16.4.0",
+      "express": "^4.18.2",
+      "jsonwebtoken": "^9.0.2",
+      "mysql2": "^3.9.0"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.2"
+    }
+  }
