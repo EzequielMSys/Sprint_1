@@ -30,7 +30,7 @@ class AuthService {
 
     return {
       ...novoUsuario,
-      senha_temporaria: senhaTemporaria // Retorna plana só para cadastro (admin vê)
+      senha_temporaria: senhaTemporaria 
     };
   }
 
@@ -46,11 +46,18 @@ class AuthService {
       throw error;
     }
 
-    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
-    if (!senhaCorreta) {
+    // DEBUG logs
+    console.log('[LOGIN DEBUG] Email:', email);
+    console.log('[LOGIN DEBUG] Senha length:', senha ? senha.length : 0);
+    console.log('[LOGIN DEBUG] Hash length:', usuario.senha ? usuario.senha.length : 0);
+    
+    const bcryptMatch = await bcrypt.compare(senha, usuario.senha);
+    console.log('[LOGIN DEBUG] bcrypt match:', bcryptMatch);
+    
+    if (!bcryptMatch) {
       throw new Error('Senha incorreta');
     }
-
+    
     // Atualiza último login
     await usuarioModel.atualizarUltimoLogin(usuario.id);
 
@@ -60,15 +67,13 @@ class AuthService {
       { expiresIn: process.env.JWT_EXPIRATION || '8h' }
     );
 
-    const { senha: _, senha_temporaria: __, ...usuarioSemSenha } = usuario;
+    const safeUser = sanitizeUser(usuario);
     
-    console.log('[DEBUG] Senha digitada:', senha ? senha.length + ' chars' : 'empty');
-    console.log('[DEBUG] Senha banco existe:', !!usuario.senha);
-    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
-    console.log('[DEBUG] Senha match:', senhaCorreta);
+    console.log('[LOGIN SUCCESS] User:', usuario.id);
+    
     return {
       token,
-      usuario: sanitizeUser(usuarioSemSenha),
+      usuario: safeUser,
       primeiro_acesso: usuario.senha_temporaria === 1
     };
   }
@@ -89,12 +94,11 @@ class AuthService {
   }
 
   async trocarSenhaPrimeiroAcesso(usuarioId, senhaAtual, novaSenha) {
-    const usuario = await usuarioModel.buscarPorEmail(usuarioId); // temp fix
+    const usuario = await usuarioModel.buscarPorId(usuarioId);
     if (!usuario) {
       throw new Error('Usuário não encontrado');
     }
 
-    // Valida senha atual (temporária)
     const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
     if (!senhaCorreta) {
       throw new Error('Senha atual incorreta');
@@ -107,13 +111,13 @@ class AuthService {
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
     const novaSenhaHash = await bcrypt.hash(novaSenha, saltRounds);
 
-    await usuarioModel.trocarSenha(usuarioId, novaSenhaHash, 0); // senha_temporaria = false
+    await usuarioModel.trocarSenha(usuarioId, novaSenhaHash, 0);
 
     return { message: 'Senha alterada com sucesso' };
   }
 
   async alterarSenha(usuarioId, senhaAtual, novaSenha) {
-    const usuario = await usuarioModel.buscarPorEmail(usuarioId); // temp fix
+    const usuario = await usuarioModel.buscarPorId(usuarioId);
     if (!usuario) {
       throw new Error('Usuário não encontrado');
     }

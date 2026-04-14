@@ -103,6 +103,9 @@ async function login(req, res) {
 module.exports = {
   registrar,
   login,
-  ...require('./novaAuthController')
+  esqueciSenha: require('./novaAuthController').esqueciSenha,
+  trocarSenhaPrimeiroAcesso: require('./novaAuthController').trocarSenhaPrimeiroAcesso,
+  alterarSenha: require('./novaAuthController').alterarSenha
 };
+
 
