@@ -1,4 +1,28 @@
-const usuarioService = require('../services/usuarioService');\nconst { authMiddleware, isAdmin } = require('../middlewares/authMiddleware');\n
+const usuarioService = require('../services/usuarioService');
+
+async function listar(req, res) {
+  try {
+    const usuarios = await usuarioService.listar();
+    return res.json(usuarios);
+  } catch (error) {
+    console.error('Erro ao listar usuários:', error);
+    return res.status(500).json({ message: 'Erro interno ao listar usuários.' });
+  }
+}
+
+async function obterPerfilLogado(req, res) {
+  try {
+    const usuario = await usuarioService.obterPerfilLogado(req.usuario.id);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+    return res.json(usuario);
+  } catch (error) {
+    console.error('Erro ao obter usuário logado:', error);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
 async function atualizar(req, res) {
   try {
     const usuarioId = req.params.id;

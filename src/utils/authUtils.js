@@ -19,5 +19,17 @@ function validarSenhaForte(senha) {
   return regex.test(senha);
 }
 
-function sanitizeUser(usuario) {\n  const { senha, senha_temporaria, token_recuperacao, token_expiracao, ...safe } = usuario;\n  return safe;\n}\n\nmodule.exports = {\n  gerarSenhaTemporaria,\n  validarSenhaForte,\n  sanitizeUser\n};
+/**
+ * Remove campos sensíveis do usuário
+ */
+function sanitizeUser(usuario) {
+  const { senha, senha_temporaria, token_recuperacao, token_expiracao, ...safe } = usuario;
+  return safe;
+}
+
+module.exports = {
+  gerarSenhaTemporaria,
+  validarSenhaForte,
+  sanitizeUser
+};
 

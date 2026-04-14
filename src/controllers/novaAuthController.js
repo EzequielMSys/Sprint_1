@@ -1,4 +1,5 @@
-const authService = require('../services/authService');\n
+const authService = require('../services/authService');
+
 /**
  * @swagger
  * /api/auth/esqueci-senha:
@@ -17,15 +18,6 @@ const authService = require('../services/authService');\n
  *     responses:
  *       200:
  *         description: Senha temporária gerada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 senha_temporaria:
- *                   type: string
- *       404:
- *         description: Email não encontrado
  */
 async function esqueciSenha(req, res) {
   try {

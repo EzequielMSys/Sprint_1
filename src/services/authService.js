@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const usuarioModel = require('../models/usuarioModel');
-const { gerarSenhaTemporaria } = require('../utils/authUtils');
+const { gerarSenhaTemporaria, validarSenhaForte, sanitizeUser } = require('../utils/authUtils');
 const jwt = require('jsonwebtoken');
 
 class AuthService {
@@ -40,7 +40,11 @@ class AuthService {
       throw new Error('Credenciais inválidas');
     }
 
-    if (usuario.ativo === 0) {\n      const error = new Error('Usuário desativado');\n      error.status = 403;\n      throw error;\n    }
+    if (usuario.ativo === 0) {
+      const error = new Error('Usuário desativado');
+      error.status = 403;
+      throw error;
+    }
 
     const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
     if (!senhaCorreta) {
@@ -56,9 +60,15 @@ class AuthService {
       { expiresIn: process.env.JWT_EXPIRATION || '8h' }
     );
 
-    const { senha, senha_temporaria: hashTemp, ...usuarioSemSenha } = usuario;
+    const { senha: _, senha_temporaria: __, ...usuarioSemSenha } = usuario;
     
-    console.log(`[LOGIN SUCCESS] ${email} - ${usuario.tipo} at ${new Date().toISOString()}`);\n    return {\n      token,\n      usuario: sanitizeUser(usuarioSemSenha),\n      primeiro_acesso: usuario.senha_temporaria === 1\n    };\n  }\n\n  async login(email, senha) {\n    try {\n      // ... existing logic\n    } catch (loginError) {\n      console.log(`[LOGIN FAIL] ${email} at ${new Date().toISOString()}: ${loginError.message}`);\n      throw loginError;\n    }\n  } 
+    console.log(`[LOGIN SUCCESS] ${email} - ${usuario.tipo} at ${new Date().toISOString()}`);
+    return {
+      token,
+      usuario: sanitizeUser(usuarioSemSenha),
+      primeiro_acesso: usuario.senha_temporaria === 1
+    };
+  }
 
   async esqueciSenha(email) {
     const usuario = await usuarioModel.buscarPorEmail(email);
@@ -87,7 +97,9 @@ class AuthService {
       throw new Error('Senha atual incorreta');
     }
 
-    const { validarSenhaForte } = require('../utils/authUtils');\n    if (!validarSenhaForte(novaSenha)) {\n      throw new Error('Senha deve ter min 8 chars, 1 maiúscula, 1 número');\n    }
+    if (!validarSenhaForte(novaSenha)) {
+      throw new Error('Senha deve ter min 8 chars, 1 maiúscula, 1 número');
+    }
 
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
     const novaSenhaHash = await bcrypt.hash(novaSenha, saltRounds);
@@ -97,7 +109,29 @@ class AuthService {
     return { message: 'Senha alterada com sucesso' };
   }
 
-async alterarSenha(usuarioId, senhaAtual, novaSenha) {\n    const usuario = await usuarioModel.buscarPorIdCompleto(usuarioId);\n    if (!usuario) {\n      throw new Error('Usuário não encontrado');\n    }\n\n    const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);\n    if (!senhaCorreta) {\n      throw new Error('Senha atual incorreta');\n    }\n\n    const { validarSenhaForte } = require('../utils/authUtils');\n    if (!validarSenhaForte(novaSenha)) {\n      throw new Error('Senha deve ter min 8 chars, 1 maiúscula, 1 número');\n    }\n\n    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);\n    const novaSenhaHash = await bcrypt.hash(novaSenha, saltRounds);\n\n    await usuarioModel.alterarSenha(usuarioId, novaSenhaHash);\n\n    return { message: 'Senha alterada com sucesso' };\n  }\n}
+  async alterarSenha(usuarioId, senhaAtual, novaSenha) {
+    const usuario = await usuarioModel.buscarPorIdCompleto(usuarioId);
+    if (!usuario) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaCorreta) {
+      throw new Error('Senha atual incorreta');
+    }
+
+    if (!validarSenhaForte(novaSenha)) {
+      throw new Error('Senha deve ter min 8 chars, 1 maiúscula, 1 número');
+    }
+
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
+    const novaSenhaHash = await bcrypt.hash(novaSenha, saltRounds);
+
+    await usuarioModel.alterarSenha(usuarioId, novaSenhaHash);
+
+    return { message: 'Senha alterada com sucesso' };
+  }
+}
 
 module.exports = new AuthService();
 

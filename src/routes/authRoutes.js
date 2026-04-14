@@ -1,1 +1,12 @@
-const express = require('express');\nconst router = express.Router();\nconst authController = require('../controllers/authController');\nconst { authMiddleware } = require('../middlewares/authMiddleware');\n\nrouter.post('/register', authController.registrar);\nrouter.post('/login', authController.login);\nrouter.post('/esqueci-senha', authController.esqueciSenha);\nrouter.post('/trocar-senha-primeiro-acesso', authMiddleware, authController.trocarSenhaPrimeiroAcesso);\nrouter.post('/alterar-senha', authMiddleware, authController.alterarSenha);\n\nmodule.exports = router;
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const { authMiddleware } = require('../middlewares/authMiddleware');
+
+router.post('/register', authController.registrar);
+router.post('/login', authController.login);
+router.post('/esqueci-senha', authController.esqueciSenha);
+router.post('/trocar-senha-primeiro-acesso', authMiddleware, authController.trocarSenhaPrimeiroAcesso);
+router.post('/alterar-senha', authMiddleware, authController.alterarSenha);
+
+module.exports = router;
