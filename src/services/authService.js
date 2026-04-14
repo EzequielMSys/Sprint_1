@@ -37,7 +37,7 @@ class AuthService {
   async login(email, senha) {
     const usuario = await usuarioModel.buscarPorEmail(email);
     if (!usuario) {
-      throw new Error('Credenciais inválidas');
+      throw new Error('Usuário não encontrado');
     }
 
     if (usuario.ativo === 0) {
@@ -48,7 +48,7 @@ class AuthService {
 
     const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
     if (!senhaCorreta) {
-      throw new Error('Credenciais inválidas');
+      throw new Error('Senha incorreta');
     }
 
     // Atualiza último login
@@ -62,7 +62,10 @@ class AuthService {
 
     const { senha: _, senha_temporaria: __, ...usuarioSemSenha } = usuario;
     
-    console.log(`[LOGIN SUCCESS] ${email} - ${usuario.tipo} at ${new Date().toISOString()}`);
+    console.log('[DEBUG] Senha digitada:', senha ? senha.length + ' chars' : 'empty');
+    console.log('[DEBUG] Senha banco existe:', !!usuario.senha);
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    console.log('[DEBUG] Senha match:', senhaCorreta);
     return {
       token,
       usuario: sanitizeUser(usuarioSemSenha),
