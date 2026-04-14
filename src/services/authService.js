@@ -35,7 +35,7 @@ class AuthService {
   }
 
   async login(email, senha) {
-    const usuario = await usuarioModel.buscarPorEmailCompleto(email);
+    const usuario = await usuarioModel.buscarPorEmail(email);
     if (!usuario) {
       throw new Error('Credenciais inválidas');
     }
@@ -86,7 +86,7 @@ class AuthService {
   }
 
   async trocarSenhaPrimeiroAcesso(usuarioId, senhaAtual, novaSenha) {
-    const usuario = await usuarioModel.buscarPorIdCompleto(usuarioId);
+    const usuario = await usuarioModel.buscarPorEmail(usuarioId); // temp fix
     if (!usuario) {
       throw new Error('Usuário não encontrado');
     }
@@ -110,7 +110,7 @@ class AuthService {
   }
 
   async alterarSenha(usuarioId, senhaAtual, novaSenha) {
-    const usuario = await usuarioModel.buscarPorIdCompleto(usuarioId);
+    const usuario = await usuarioModel.buscarPorEmail(usuarioId); // temp fix
     if (!usuario) {
       throw new Error('Usuário não encontrado');
     }

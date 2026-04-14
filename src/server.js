@@ -1,4 +1,3 @@
-// src/server.js - Vercel Serverless Ready
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -44,6 +43,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Vercel Serverless - NO app.listen()
-module.exports = app;
+// 🔥 COMPATÍVEL COM RENDER E LOCAL
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+  });
+}
 
+// Exporta para Vercel
+module.exports = app;
