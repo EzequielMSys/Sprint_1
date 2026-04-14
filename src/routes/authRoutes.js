@@ -1,6 +1,1 @@
-const express = require('express');
-const router = express.Router();
-const authController = require('../controllers/authController');
-router.post('/register', authController.registrar);
-router.post('/login', authController.login);
-module.exports = router;
+const express = require('express');\nconst router = express.Router();\nconst authController = require('../controllers/authController');\nconst { authMiddleware } = require('../middlewares/authMiddleware');\n\nrouter.post('/register', authController.registrar);\nrouter.post('/login', authController.login);\nrouter.post('/esqueci-senha', authController.esqueciSenha);\nrouter.post('/trocar-senha-primeiro-acesso', authMiddleware, authController.trocarSenhaPrimeiroAcesso);\nrouter.post('/alterar-senha', authMiddleware, authController.alterarSenha);\n\nmodule.exports = router;
