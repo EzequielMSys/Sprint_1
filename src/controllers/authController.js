@@ -29,15 +29,16 @@ const authService = require('../services/authService');
  */
 async function registrar(req, res) {
   try {
-    const { nome, email, tipo } = req.body;
+    const { nome, email, tipo, senha } = req.body;
     if (!nome || !email) {
-      return res.status(400).json({ message: 'Nome e email são obrigatórios.' });
+      return res.status(400).json({ error: 'Nome e email são obrigatórios.' });
     }
 
-    const resultado = await authService.registrar({ nome, email, tipo });
+    const resultado = await authService.registrar({ nome, email, tipo, senha });
 
     return res.status(201).json({
-      message: `Usuário criado. Senha temporária: ${resultado.senha_temporaria}. Informe ao usuário trocar no primeiro acesso.`,
+      message: 'Usuário criado com sucesso. Use a senha temporária para o primeiro acesso.',
+      senha_temporaria: resultado.senha_temporaria,
       usuario: {
         id: resultado.id,
         nome: resultado.nome,
@@ -48,9 +49,9 @@ async function registrar(req, res) {
   } catch (error) {
     console.error('Erro ao registrar usuário:', error);
     if (error.message === 'Email já cadastrado') {
-      return res.status(409).json({ message: error.message });
+      return res.status(409).json({ error: error.message });
     }
-    return res.status(500).json({ message: 'Erro interno ao registrar usuário.' });
+    return res.status(500).json({ error: 'Erro interno ao registrar usuário.' });
   }
 }
 
@@ -82,21 +83,25 @@ async function login(req, res) {
   try {
     const { email, senha } = req.body;
     if (!email || !senha) {
-      return res.status(400).json({ message: 'Email e senha são obrigatórios.' });
+      return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
     }
 
     const resultado = await authService.login(email, senha);
 
     return res.json({
-      message: 'Login realizado com sucesso.',
-      ...resultado
+      token: resultado.token,
+      usuario: resultado.usuario,
+      primeiro_acesso: resultado.primeiro_acesso
     });
   } catch (error) {
     console.error('Erro ao autenticar usuário:', error);
-    if (error.message === 'Credenciais inválidas' || error.message === 'Usuário desativado') {
-      return res.status(401).json({ message: error.message });
+    if (error.status === 403 || error.message === 'Usuário desativado') {
+      return res.status(403).json({ error: error.message || 'Usuário desativado' });
     }
-    return res.status(500).json({ message: 'Erro interno ao autenticar.' });
+    if (error.message === 'Usuário não encontrado' || error.message === 'Senha incorreta') {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+    return res.status(500).json({ error: 'Erro interno ao autenticar.' });
   }
 }
 

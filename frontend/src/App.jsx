@@ -21,17 +21,20 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/esqueci-senha" element={<EsqueciSenha />} />
         
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/primeiro-acesso" element={<PrimeiroAcesso />} />
-          <Route path="/inicio" element={<Dashboard />} />
-          <Route path="/perfil" element={<Perfil />} />
-          <Route path="/alterar-senha" element={<AlterarSenha />} />
-        </Route>
+        {/* Protected Routes with Layout */}
+        <Route element={<Layout />}>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/primeiro-acesso" element={<PrimeiroAcesso />} />
+            <Route path="/inicio" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/perfil" element={<Perfil />} />
+            <Route path="/alterar-senha" element={<AlterarSenha />} />
+          </Route>
 
-        {/* Admin Only */}
-        <Route element={<ProtectedRoute adminOnly />}>
-          <Route path="/usuarios" element={<UsuariosAdmin />} />
+          {/* Admin Only */}
+          <Route element={<ProtectedRoute adminOnly />}>
+            <Route path="/usuarios" element={<UsuariosAdmin />} />
+          </Route>
         </Route>
       </Routes>
     </AuthProvider>
@@ -39,4 +42,3 @@ function App() {
 }
 
 export default App
-

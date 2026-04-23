@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 class AuthService {
   async registrar(dados) {
-    const { nome, email, tipo = 'aluno' } = dados;
+    const { nome, email, tipo = 'aluno', senha } = dados;
     
     // Verifica se email já existe
     const usuarioExistente = await usuarioModel.buscarPorEmail(email);
@@ -13,24 +13,38 @@ class AuthService {
       throw new Error('Email já cadastrado');
     }
 
-    // Gera senha temporária aleatória
-    const senhaTemporaria = gerarSenhaTemporaria();
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
-    const senhaHash = await bcrypt.hash(senhaTemporaria, saltRounds);
+    let senhaHash;
+    let isTemporaria = 1;
+    let senhaRetorno;
 
-    // Cria usuário com senha temporária
+    if (senha) {
+      // Usuário forneceu própria senha — valida força
+      if (!validarSenhaForte(senha)) {
+        throw new Error('Senha deve ter min 8 chars, 1 maiúscula, 1 número');
+      }
+      senhaHash = await bcrypt.hash(senha, saltRounds);
+      isTemporaria = 0;
+      senhaRetorno = null;
+    } else {
+      // Gera senha temporária aleatória (backward compatible)
+      senhaRetorno = gerarSenhaTemporaria();
+      senhaHash = await bcrypt.hash(senhaRetorno, saltRounds);
+    }
+
+    // Cria usuário
     const novoUsuario = await usuarioModel.criarUsuario({
       nome,
       email,
       senhaHash,
       tipo,
-      senha_temporaria: 1,
+      senha_temporaria: isTemporaria,
       ativo: 1
     });
 
     return {
       ...novoUsuario,
-      senha_temporaria: senhaTemporaria 
+      senha_temporaria: senhaRetorno
     };
   }
 
@@ -94,7 +108,7 @@ class AuthService {
   }
 
   async trocarSenhaPrimeiroAcesso(usuarioId, senhaAtual, novaSenha) {
-    const usuario = await usuarioModel.buscarPorId(usuarioId);
+    const usuario = await usuarioModel.buscarPorIdCompleto(usuarioId);
     if (!usuario) {
       throw new Error('Usuário não encontrado');
     }
@@ -111,7 +125,7 @@ class AuthService {
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
     const novaSenhaHash = await bcrypt.hash(novaSenha, saltRounds);
 
-    await usuarioModel.trocarSenha(usuarioId, novaSenhaHash, 0);
+    await usuarioModel.trocarSenha(usuarioId, novaSenhaHash);
 
     return { message: 'Senha alterada com sucesso' };
   }

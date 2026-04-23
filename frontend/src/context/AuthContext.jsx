@@ -22,6 +22,8 @@ const authReducer = (state, action) => {
         primeiroAcesso: action.payload.primeiro_acesso,
         loading: false
       }
+    case 'UPDATE_USER':
+      return { ...state, user: action.payload }
     case 'LOGOUT':
       return initialState
     case 'LOADING':
@@ -39,13 +41,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token')
     const user = localStorage.getItem('user')
+    const primeiroAcesso = localStorage.getItem('primeiro_acesso') === 'true'
     if (token && user) {
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: {
           token,
           user: JSON.parse(user),
-          primeiro_acesso: false
+          primeiro_acesso: primeiroAcesso
         }
       })
     }
@@ -59,6 +62,7 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.usuario))
+      localStorage.setItem('primeiro_acesso', response.primeiro_acesso ? 'true' : 'false')
       
       dispatch({
         type: 'LOGIN_SUCCESS',

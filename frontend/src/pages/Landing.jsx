@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom'
-import { toast } from 'react-hot-toast'
+﻿import { Link } from 'react-router-dom'
 
 const Landing = () => {
   return (
@@ -10,7 +9,7 @@ const Landing = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="animate-fade-in">
             <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight">
-              Estude com 
+              Estude com{' '}
               <span className="bg-gradient-to-r from-accent to-yellow-400 bg-clip-text text-transparent">
                 Inteligência
               </span>
@@ -20,16 +19,16 @@ const Landing = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
               <Link 
-                to="/register"
+                to="/login"
                 className="btn-primary text-lg py-4 px-12 w-full sm:w-auto shadow-2xl hover:shadow-3xl transform hover:-translate-y-1"
               >
-                Começar Agora
+                Acessar sistema
               </Link>
               <Link 
-                to="/login" 
+                to="/register" 
                 className="btn-secondary text-lg py-4 px-12 w-full sm:w-auto"
               >
-                Já tenho conta
+                Começar Agora
               </Link>
             </div>
           </div>
@@ -99,12 +98,20 @@ const Landing = () => {
           <p className="text-xl text-textSecondary mb-12 max-w-2xl mx-auto">
             Comece hoje e veja resultados em 30 dias ou sua garantia total.
           </p>
-          <Link 
-            to="/register"
-            className="btn-primary text-xl py-6 px-16 shadow-2xl hover:shadow-3xl inline-block transform hover:-translate-y-2 transition-all duration-300"
-          >
-            Quero Aprovar Agora
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              to="/login"
+              className="btn-primary text-xl py-6 px-16 shadow-2xl hover:shadow-3xl inline-block transform hover:-translate-y-2 transition-all duration-300"
+            >
+              Acessar sistema
+            </Link>
+            <Link 
+              to="/register"
+              className="btn-secondary text-xl py-6 px-16 inline-block transform hover:-translate-y-2 transition-all duration-300"
+            >
+              Criar conta
+            </Link>
+          </div>
         </div>
       </section>
     </div>
@@ -112,4 +119,3 @@ const Landing = () => {
 }
 
 export default Landing
-

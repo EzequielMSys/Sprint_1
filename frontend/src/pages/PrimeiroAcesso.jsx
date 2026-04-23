@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import authService from '../services/authService'
-import usuarioService from '../services/usuarioService'
 
 const PrimeiroAcesso = () => {
   const [formData, setFormData] = useState({
@@ -11,13 +10,22 @@ const PrimeiroAcesso = () => {
     confirmar_senha: ''
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
   const { user, login } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+
     if (formData.nova_senha !== formData.confirmar_senha) {
-      alert('Senhas não coincidem!')
+      setError('Senhas não coincidem!')
+      return
+    }
+
+    const senhaForteRegex = /^(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/
+    if (!senhaForteRegex.test(formData.nova_senha)) {
+      setError('Senha deve ter no mínimo 8 caracteres, 1 maiúscula e 1 número')
       return
     }
 
@@ -29,19 +37,17 @@ const PrimeiroAcesso = () => {
         formData.confirmar_senha
       )
       
-      // Refresh login to update primeiro_acesso status
-      const response = await login(user.email, formData.nova_senha)
-      
+      await login(user.email, formData.nova_senha)
       navigate('/inicio')
     } catch (error) {
-      // Error handled by service
+      setError(error.response?.data?.error || 'Erro ao alterar senha')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-900 via-bgDark to-slate-900">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-slate-900 via-bgDark to-slate-900">
       <div className="max-w-md w-full space-y-8 card animate-fade-in">
         <div className="text-center">
           <div className="w-20 h-20 bg-gradient-to-r from-accent to-orange-500 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl">
@@ -61,6 +67,12 @@ const PrimeiroAcesso = () => {
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 text-red-400 text-sm font-semibold text-center">
+            {error}
+          </div>
+        )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
@@ -110,17 +122,7 @@ const PrimeiroAcesso = () => {
             disabled={loading}
             className="btn-primary w-full text-lg py-4 font-semibold shadow-2xl hover:shadow-3xl"
           >
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Alterando...
-              </>
-            ) : (
-              'Definir Nova Senha'
-            )}
+            {loading ? 'Alterando...' : 'Definir Nova Senha'}
           </button>
         </form>
       </div>
@@ -129,4 +131,3 @@ const PrimeiroAcesso = () => {
 }
 
 export default PrimeiroAcesso
-

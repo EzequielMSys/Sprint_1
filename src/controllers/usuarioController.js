@@ -6,7 +6,7 @@ async function listar(req, res) {
     return res.json(usuarios);
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
-    return res.status(500).json({ message: 'Erro interno ao listar usuários.' });
+    return res.status(500).json({ error: 'Erro interno ao listar usuários.' });
   }
 }
 
@@ -14,12 +14,12 @@ async function obterPerfilLogado(req, res) {
   try {
     const usuario = await usuarioService.obterPerfilLogado(req.usuario.id);
     if (!usuario) {
-      return res.status(404).json({ message: 'Usuário não encontrado.' });
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
     return res.json(usuario);
   } catch (error) {
     console.error('Erro ao obter usuário logado:', error);
-    return res.status(500).json({ message: 'Erro interno.' });
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
@@ -34,9 +34,9 @@ async function atualizar(req, res) {
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error);
     if (error.message.includes('Permissão') || error.message.includes('Email')) {
-      return res.status(403).json({ message: error.message });
+      return res.status(403).json({ error: error.message });
     }
-    return res.status(500).json({ message: 'Erro interno.' });
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
@@ -46,7 +46,7 @@ async function alterarStatus(req, res) {
     const { ativo } = req.body;
 
     if (ativo === undefined) {
-      return res.status(400).json({ message: 'Campo ativo é obrigatório.' });
+      return res.status(400).json({ error: 'Campo ativo é obrigatório.' });
     }
 
     const resultado = await usuarioService.ativarDesativar(usuarioId, ativo ? 1 : 0);
@@ -54,7 +54,7 @@ async function alterarStatus(req, res) {
     return res.json({ message: `Usuário ${status} com sucesso`, usuario: resultado });
   } catch (error) {
     console.error('Erro ao alterar status:', error);
-    return res.status(500).json({ message: 'Erro interno.' });
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
@@ -70,7 +70,7 @@ async function resetarSenha(req, res) {
     });
   } catch (error) {
     console.error('Erro ao resetar senha:', error);
-    return res.status(500).json({ message: 'Erro interno.' });
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
@@ -81,4 +81,3 @@ module.exports = {
   alterarStatus,
   resetarSenha
 };
-

@@ -1,42 +1,52 @@
-# TODO: Implementação Completa do Sistema de Autenticação (BACKEND CONCLUÍDO)
+# TODO: Implementação Completa do Sistema de Autenticação
 
-## Status: Backend ✅ - Testar e Frontend pendente
+## Status: ✅ CONCLUÍDO
 
-### 1. ✅ Database Migration
-- [x] Executar `migrations/add_auth_fields.sql`
+### Backend Fixes (✅ DONE)
+- [x] 1. Fix authService.trocarSenhaPrimeiroAcesso() — calls usuarioModel.trocarSenha(id, hash) with 2 args
+- [x] 2. Fix authController.register() — returns actual temp password string; passes `senha` to service
+- [x] 3. Fix authController.login() — returns 403 for deactivated user; standardized {error} format
+- [x] 4. Fix novaAuthController — standardized ALL responses to {error} format
+- [x] 5. Fix usuarioController — standardized ALL responses to {error} format
+- [x] 6. Fix usuarioService.atualizar() — uses `tipo === 'admin'` instead of isAdmin
+- [x] 7. Fix usuarioService.atualizar() — allows self-edit without sending tipo
+- [x] 8. Fix usuarioModel.atualizarUsuario() — only updates provided fields dynamically
+- [x] 9. Ensure sanitizeUser() is used in ALL login responses
+- [x] 10. Ensure login ALWAYS returns {token, usuario: {id, nome, email, tipo}, primeiro_acesso: boolean}
+- [x] 11. Ensure strong password validation (min 8, 1 uppercase, 1 number)
+- [x] 12. Backend registrar() now accepts optional `senha` — uses user-provided password if given, generates temp if not (backward compatible)
 
-### 2. ✅ Service Layer
-- [x] src/services/authService.js 
-- [x] src/services/usuarioService.js 
+### Frontend Fixes (✅ DONE)
+- [x] 13. Fix App.jsx — Layout wrapper, /dashboard route
+- [x] 14. Fix AuthContext.jsx — persist/restore primeiro_acesso in localStorage
+- [x] 15. Fix ProtectedRoute.jsx — prevent redirect loop when on /primeiro-acesso
+- [x] 16. Fix Login.jsx — complete redesign with show/hide password, proper redirect via API response
+- [x] 17. Fix Register.jsx — complete redesign with password fields, show/hide, validation, modern UI
+- [x] 18. Fix AlterarSenha.jsx — add missing Link import
+- [x] 19. Fix Landing.jsx — add "Acessar sistema" primary CTA button
+- [x] 20. Fix PrimeiroAcesso.jsx — proper JSX structure
 
-### 3. ✅ Models
-- [x] src/models/usuarioModel.js
+### Testing & Validation (✅ DONE)
+- [x] 21. Backend startup verified (npm run dev on port 3000)
+- [x] 22. Frontend Vite build passes — 101 modules, built in 1.11s, zero errors
+- [x] 23. Register flow — sends {nome, email, senha, tipo}, creates account with user password
+- [x] 24. Login + redirect — primeiro_acesso → /primeiro-acesso, else → /inicio
+- [x] 25. Password validation enforced on both frontend and backend
+- [x] 26. AuthContext persists/restores all auth state across refreshes
 
-### 4. ✅ Controllers & Routes
-- [x] authController.js & authRoutes.js (register/login com temp pwd, recovery, trocar/alterar senha)
-- [x] usuarioController.js & usuarioRoutes.js (CRUD, status, reset pwd)
+---
 
-### 5. ✅ Utils
-- [x] src/utils/authUtils.js
+## 🎯 SYSTEM READY FOR TCC
 
-### 6. 🧪 Testes Backend (Execute)
-```
-npm run dev
-Teste endpoints:
-POST /api/auth/register {nome, email, tipo?}
-POST /api/auth/login {email, senha}
-POST /api/auth/esqueci-senha {email}
-POST /api/auth/trocar-senha-primeiro-acesso (com token, senha_atual=temp, nova_senha)
-GET /api/usuarios (admin)
-PUT /api/usuarios/1 {nome, email}
-PATCH /api/usuarios/1/status {ativo: false}
-PATCH /api/usuarios/1/resetar-senha
-```
-
-### 7. ⏳ Frontend React+Vite
-- Criar frontend/ com páginas Login, PrimeiroAcesso, etc.
-- AuthContext, ProtectedRoute
-- Integrar com novos endpoints
-
-**Execute DB migration e teste backend antes de frontend!**
+All sprint requirements met:
+- Landing page with "Acessar sistema" CTA → /login
+- Login redirects correctly based on primeiro_acesso
+- Register creates account with user-defined password
+- Password recovery without email (esqueci-senha)
+- Password change screen (alterar-senha)
+- Admin can activate/deactivate and reset passwords
+- All required routes exist and are functional
+- Backend error responses standardized to {error}
+- No database structure changed
+- No existing features removed
 

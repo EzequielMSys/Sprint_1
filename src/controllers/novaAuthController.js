@@ -23,7 +23,7 @@ async function esqueciSenha(req, res) {
   try {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ message: 'Email é obrigatório.' });
+      return res.status(400).json({ error: 'Email é obrigatório.' });
     }
 
     const resultado = await authService.esqueciSenha(email);
@@ -34,7 +34,10 @@ async function esqueciSenha(req, res) {
     });
   } catch (error) {
     console.error('Erro na recuperação de senha:', error);
-    return res.status(500).json({ message: 'Erro interno.' });
+    if (error.message === 'Email não encontrado') {
+      return res.status(404).json({ error: 'Email não encontrado' });
+    }
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
@@ -69,11 +72,11 @@ async function trocarSenhaPrimeiroAcesso(req, res) {
     const { senha_atual, nova_senha, confirmar_senha } = req.body;
 
     if (!senha_atual || !nova_senha || !confirmar_senha) {
-      return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
     }
 
     if (nova_senha !== confirmar_senha) {
-      return res.status(400).json({ message: 'Senhas não coincidem.' });
+      return res.status(400).json({ error: 'Senhas não coincidem.' });
     }
 
     await authService.trocarSenhaPrimeiroAcesso(usuarioId, senha_atual, nova_senha);
@@ -82,9 +85,12 @@ async function trocarSenhaPrimeiroAcesso(req, res) {
   } catch (error) {
     console.error('Erro ao trocar senha primeiro acesso:', error);
     if (error.message.includes('Senha atual')) {
-      return res.status(401).json({ message: error.message });
+      return res.status(401).json({ error: error.message });
     }
-    return res.status(500).json({ message: 'Erro interno.' });
+    if (error.message.includes('8 chars')) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
@@ -119,11 +125,11 @@ async function alterarSenha(req, res) {
     const { senha_atual, nova_senha, confirmar_senha } = req.body;
 
     if (!senha_atual || !nova_senha || !confirmar_senha) {
-      return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
     }
 
     if (nova_senha !== confirmar_senha) {
-      return res.status(400).json({ message: 'Senhas não coincidem.' });
+      return res.status(400).json({ error: 'Senhas não coincidem.' });
     }
 
     await authService.alterarSenha(usuarioId, senha_atual, nova_senha);
@@ -132,9 +138,12 @@ async function alterarSenha(req, res) {
   } catch (error) {
     console.error('Erro ao alterar senha:', error);
     if (error.message.includes('Senha atual')) {
-      return res.status(401).json({ message: error.message });
+      return res.status(401).json({ error: error.message });
     }
-    return res.status(500).json({ message: 'Erro interno.' });
+    if (error.message.includes('8 chars')) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro interno.' });
   }
 }
 
