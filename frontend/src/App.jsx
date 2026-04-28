@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import PrimeiroAcesso from './pages/PrimeiroAcesso'
 import Dashboard from './pages/Dashboard'
+import Cronograma from './pages/Cronograma'
 import Perfil from './pages/Perfil'
 import AlterarSenha from './pages/AlterarSenha'
 import EsqueciSenha from './pages/EsqueciSenha'
@@ -27,6 +28,7 @@ function App() {
             <Route path="/primeiro-acesso" element={<PrimeiroAcesso />} />
             <Route path="/inicio" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/cronograma" element={<Cronograma />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/alterar-senha" element={<AlterarSenha />} />
           </Route>

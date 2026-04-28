@@ -1,15 +1,29 @@
 import { Outlet } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
+import Sidebar from '../components/Sidebar'
 
-const Layout = () => {
+function Layout() {
   const { isAuthenticated } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-bgDark to-slate-900">
-      {isAuthenticated && <Navbar />}
-      
-      <main className={`min-h-screen pt-0 ${isAuthenticated ? 'pt-20' : 'pt-12'}`}>
+      {isAuthenticated && (
+        <>
+          <Navbar onMenuClick={() => setSidebarOpen(v => !v)} sidebarOpen={sidebarOpen} />
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        </>
+      )}
+
+      <main
+        className={`min-h-screen transition-all duration-300 ${
+          isAuthenticated
+            ? 'pt-16 lg:pl-64'
+            : ''
+        }`}
+      >
         <Outlet />
       </main>
     </div>

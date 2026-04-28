@@ -1,214 +1,304 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import usuarioService from '../services/usuarioService'
+import authService from '../services/authService'
 import { toast } from 'react-hot-toast'
-import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
-const Perfil = () => {
-  const { user, logout } = useAuth()
-  const [formData, setFormData] = useState({
+const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
+
+const IconUser = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+const IconLock = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+const IconCamera = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+const IconSpinner = () => <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+
+function validarSenha(senha) {
+  if (senha.length < 8) return 'Mínimo 8 caracteres'
+  if (!/[A-Z]/.test(senha)) return 'Pelo menos 1 letra maiúscula'
+  if (!/[0-9]/.test(senha)) return 'Pelo menos 1 número'
+  return null
+}
+
+export default function Perfil() {
+  const { user, updateUser } = useAuth()
+  const fileRef = useRef(null)
+  const [tab, setTab] = useState('info')
+  const [saving, setSaving] = useState(false)
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null)
+
+  const [form, setForm] = useState({
     nome: '',
+    apelido: '',
     email: ''
   })
-  const [loading, setLoading] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
+
+  const [senhaForm, setSenhaForm] = useState({
+    senhaAtual: '',
+    novaSenha: '',
+    confirmarSenha: ''
+  })
+  const [senhaErro, setSenhaErro] = useState('')
 
   useEffect(() => {
     if (user) {
-      setFormData({
+      setForm({
         nome: user.nome || '',
+        apelido: user.apelido || '',
         email: user.email || ''
       })
+      setAvatarPreview(user.avatar || null)
     }
   }, [user])
 
-  const handleSubmit = async (e) => {
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione uma imagem válida')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result)
+      updateUser({ avatar: reader.result })
+      toast.success('Foto atualizada!')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSaveInfo = async (e) => {
     e.preventDefault()
     setSaving(true)
-
     try {
-      const response = await usuarioService.atualizar(user.id, formData)
+      const payload = { nome: form.nome, email: form.email }
+      const response = await usuarioService.atualizar(user.id, payload)
+      updateUser({ nome: form.nome, email: form.email, apelido: form.apelido })
       toast.success('Perfil atualizado com sucesso!')
-      
-      // Update local state
-      localStorage.setItem('user', JSON.stringify(response.usuario))
-      window.location.reload() // Simple refresh to update context
     } catch (error) {
       toast.error(error.response?.data?.error || 'Erro ao atualizar perfil')
     } finally {
       setSaving(false)
-      setEditing(false)
     }
   }
+
+  const handleSaveSenha = async (e) => {
+    e.preventDefault()
+    setSenhaErro('')
+
+    const erro = validarSenha(senhaForm.novaSenha)
+    if (erro) {
+      setSenhaErro(erro)
+      return
+    }
+    if (senhaForm.novaSenha !== senhaForm.confirmarSenha) {
+      setSenhaErro('As senhas não coincidem')
+      return
+    }
+
+    setSaving(true)
+    try {
+      await authService.alterarSenha(senhaForm.senhaAtual, senhaForm.novaSenha, senhaForm.confirmarSenha)
+      toast.success('Senha alterada com sucesso!')
+      setSenhaForm({ senhaAtual: '', novaSenha: '', confirmarSenha: '' })
+    } catch (error) {
+      const msg = error.response?.data?.error || 'Erro ao alterar senha'
+      setSenhaErro(msg)
+      toast.error(msg)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const displayName = form.apelido || form.nome || 'Usuário'
+  const initials = (displayName?.charAt(0) || 'U').toUpperCase()
+  const tipoLabel = user?.tipo === 'admin' ? 'Administrador' : 'Aluno'
+  const dataCadastro = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString('pt-BR')
+    : new Date().toLocaleDateString('pt-BR')
 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-24 h-24 bg-gray-700 rounded-2xl mx-auto mb-8 flex items-center justify-center">
-            <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="w-16 h-16 bg-white/10 rounded-2xl mx-auto mb-4 flex items-center justify-center animate-pulse">
+            <IconUser />
           </div>
-          <h2 className="text-2xl font-bold text-textPrimary mb-2">Carregando perfil...</h2>
+          <p className="text-textSecondary">Carregando perfil...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen pt-6">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-16">
-          <div className="w-32 h-32 bg-gradient-to-r from-primary to-blue-600 rounded-full mx-auto mb-8 flex items-center justify-center shadow-2xl ring-8 ring-white/20">
-            <span className="text-5xl font-black text-white">
-              {user.nome?.charAt(0)?.toUpperCase()}
-            </span>
-          </div>
-          <h1 className="text-4xl font-black bg-gradient-to-r from-textPrimary to-textSecondary bg-clip-text text-transparent mb-4">
-            {user.nome}
-          </h1>
-          <p className="text-xl text-textSecondary">
-            {user.tipo === 'admin' ? 'Administrador' : 'Aluno'} | Membro desde {new Date().toLocaleDateString()}
-          </p>
-        </div>
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-3xl mx-auto">
+        <motion.div variants={fadeUp} initial="hidden" animate="visible">
 
-        {/* Perfil Form */}
-        <div className="card p-10 mb-12">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-textPrimary">
-              Informações do Perfil
-            </h2>
-            <div className="flex gap-3">
-              {!editing ? (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="px-6 py-2.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-primary/90 shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  Editar
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={saving}
-                    className="px-6 py-2.5 bg-gradient-to-r from-secondary to-green-500 text-white rounded-xl font-semibold hover:from-secondary/90 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-                  >
-                    {saving ? 'Salvando...' : 'Salvar'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditing(false)
-                      setFormData({ nome: user.nome, email: user.email })
-                    }}
-                    className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-textPrimary rounded-xl font-semibold transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-                </>
-              )}
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="relative inline-block">
+              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center shadow-2xl ring-4 ring-white/10 overflow-hidden">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-5xl font-black text-white">{initials}</span>
+                )}
+              </div>
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-all shadow-lg"
+                title="Alterar foto"
+              >
+                <IconCamera />
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             </div>
+            <h1 className="text-3xl font-black text-textPrimary mt-4">{displayName}</h1>
+            <p className="text-textSecondary mt-1">{tipoLabel} • Membro desde {dataCadastro}</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <label className="block text-sm font-semibold text-textSecondary mb-3">
-                  Nome Completo
-                </label>
-                <input
-                  type="text"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                  disabled={!editing}
-                  className={`w-full px-5 py-4 rounded-2xl text-lg font-semibold border-2 transition-all duration-200 ${
-                    editing 
-                      ? 'border-primary/30 bg-white/20 focus:border-primary focus:ring-4 focus:ring-primary/20' 
-                      : 'border-transparent bg-white/10 cursor-not-allowed'
-                  }`}
-                  placeholder="Nome completo"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-textSecondary mb-3">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  disabled={!editing}
-                  className={`w-full px-5 py-4 rounded-2xl text-lg font-semibold border-2 transition-all duration-200 ${
-                    editing 
-                      ? 'border-primary/30 bg-white/20 focus:border-primary focus:ring-4 focus:ring-primary/20' 
-                      : 'border-transparent bg-white/10 cursor-not-allowed'
-                  }`}
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* Security Section */}
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="card p-8 hover:shadow-3xl">
-            <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-secondary to-green-500 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-textPrimary">Segurança da Conta</h3>
-                <p className="text-textSecondary text-sm">Mantenha sua conta protegida</p>
-              </div>
-            </div>
-            <Link 
-              to="/alterar-senha"
-              className="inline-flex items-center text-primary hover:text-primary/80 font-semibold group"
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 bg-white/5 p-1.5 rounded-2xl border border-white/10 w-fit mx-auto">
+            <button
+              onClick={() => setTab('info')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                tab === 'info' ? 'bg-gradient-to-r from-primary to-indigo-500 text-white shadow-lg' : 'text-textSecondary hover:text-textPrimary hover:bg-white/5'
+              }`}
             >
-              Alterar Senha
-              <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
+              <IconUser /> Informações
+            </button>
+            <button
+              onClick={() => setTab('seguranca')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                tab === 'seguranca' ? 'bg-gradient-to-r from-primary to-indigo-500 text-white shadow-lg' : 'text-textSecondary hover:text-textPrimary hover:bg-white/5'
+              }`}
+            >
+              <IconLock /> Segurança
+            </button>
           </div>
 
-          <div className="card p-8">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-textPrimary">Conta Ativa</h3>
-                <p className="text-textSecondary text-sm">Status da sua conta</p>
-              </div>
-            </div>
-            <div className="mt-6 p-4 bg-white/5 rounded-xl">
-              <span className="inline-block px-4 py-2 bg-gradient-to-r from-secondary to-green-500 text-white rounded-full text-sm font-semibold shadow-lg">
-                ✅ Ativa
-              </span>
-            </div>
-          </div>
-        </div>
+          {/* Info Tab */}
+          {tab === 'info' && (
+            <motion.div variants={fadeUp} initial="hidden" animate="visible" className="glass-card p-8">
+              <form onSubmit={handleSaveInfo} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-textSecondary mb-2">Nome completo</label>
+                    <input
+                      type="text"
+                      value={form.nome}
+                      onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+                      className="input-field"
+                      placeholder="Seu nome"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-textSecondary mb-2">Apelido <span className="text-textSecondary/60 font-normal">(opcional)</span></label>
+                    <input
+                      type="text"
+                      value={form.apelido}
+                      onChange={e => setForm(f => ({ ...f, apelido: e.target.value }))}
+                      className="input-field"
+                      placeholder="Como quer ser chamado?"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-textSecondary mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    className="input-field"
+                    placeholder="seu@email.com"
+                    required
+                  />
+                </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-textSecondary mb-2">Tipo</label>
+                    <input type="text" value={tipoLabel} disabled className="input-field opacity-60 cursor-not-allowed" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-textSecondary mb-2">Data de cadastro</label>
+                    <input type="text" value={dataCadastro} disabled className="input-field opacity-60 cursor-not-allowed" />
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {saving ? <><IconSpinner /> Salvando...</> : 'Salvar alterações'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
 
-        <div className="text-center mt-20 pt-12 border-t border-white/10">
-          <button
-            onClick={logout}
-            className="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-textPrimary rounded-xl font-semibold transition-all duration-200 hover:shadow-lg"
-          >
-            Sair da Conta
-          </button>
-        </div>
+          {/* Security Tab */}
+          {tab === 'seguranca' && (
+            <motion.div variants={fadeUp} initial="hidden" animate="visible" className="glass-card p-8">
+              <h2 className="text-xl font-bold text-textPrimary mb-6 flex items-center gap-2">
+                <IconLock /> Alterar senha
+              </h2>
+              <form onSubmit={handleSaveSenha} className="space-y-5 max-w-lg">
+                <div>
+                  <label className="block text-sm font-semibold text-textSecondary mb-2">Senha atual</label>
+                  <input
+                    type="password"
+                    value={senhaForm.senhaAtual}
+                    onChange={e => setSenhaForm(f => ({ ...f, senhaAtual: e.target.value }))}
+                    className="input-field"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-textSecondary mb-2">Nova senha</label>
+                  <input
+                    type="password"
+                    value={senhaForm.novaSenha}
+                    onChange={e => setSenhaForm(f => ({ ...f, novaSenha: e.target.value }))}
+                    className="input-field"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <p className="text-xs text-textSecondary mt-1.5">Mínimo 8 caracteres, 1 maiúscula e 1 número</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-textSecondary mb-2">Confirmar nova senha</label>
+                  <input
+                    type="password"
+                    value={senhaForm.confirmarSenha}
+                    onChange={e => setSenhaForm(f => ({ ...f, confirmarSenha: e.target.value }))}
+                    className="input-field"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                {senhaErro && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                    {senhaErro}
+                  </div>
+                )}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {saving ? <><IconSpinner /> Salvando...</> : 'Alterar senha'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </motion.div>
       </div>
     </div>
   )
 }
-
-export default Perfil
 

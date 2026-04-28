@@ -43,11 +43,15 @@ export const AuthProvider = ({ children }) => {
     const user = localStorage.getItem('user')
     const primeiroAcesso = localStorage.getItem('primeiro_acesso') === 'true'
     if (token && user) {
+      const parsedUser = JSON.parse(user)
+      // Merge apelido from localStorage if exists
+      const apelido = localStorage.getItem('apelido')
+      if (apelido) parsedUser.apelido = apelido
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: {
           token,
-          user: JSON.parse(user),
+          user: parsedUser,
           primeiro_acesso: primeiroAcesso
         }
       })
@@ -87,15 +91,31 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('primeiro_acesso')
+    localStorage.removeItem('apelido')
     dispatch({ type: 'LOGOUT' })
     toast.success('Até logo!')
     navigate('/')
+  }
+
+  const updateUser = (data) => {
+    const updatedUser = { ...state.user, ...data }
+    if (data.apelido !== undefined) {
+      if (data.apelido) {
+        localStorage.setItem('apelido', data.apelido)
+      } else {
+        localStorage.removeItem('apelido')
+      }
+    }
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    dispatch({ type: 'UPDATE_USER', payload: updatedUser })
   }
 
   const value = {
     ...state,
     login,
     logout,
+    updateUser,
     isAuthenticated: !!state.token,
     isAdmin: state.user?.tipo === 'admin',
     isPrimeiroAcesso: state.primeiroAcesso
