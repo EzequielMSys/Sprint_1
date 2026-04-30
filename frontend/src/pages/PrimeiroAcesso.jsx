@@ -38,7 +38,7 @@ const PrimeiroAcesso = () => {
       )
       
       await login(user.email, formData.nova_senha)
-      navigate('/inicio')
+      navigate('/onboarding')
     } catch (error) {
       setError(error.response?.data?.error || 'Erro ao alterar senha')
     } finally {

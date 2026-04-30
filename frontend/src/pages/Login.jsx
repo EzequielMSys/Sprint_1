@@ -30,13 +30,8 @@ const Login = () => {
 
     setLoading(true)
     try {
-      const response = await login(formData.email, formData.senha)
-
-      if (response.primeiro_acesso) {
-        navigate('/primeiro-acesso')
-      } else {
-        navigate('/inicio')
-      }
+      await login(formData.email, formData.senha)
+      // Redirect will be handled by ProtectedRoute based on user state
     } catch (error) {
       // Error toast handled by AuthContext
     } finally {

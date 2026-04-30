@@ -55,7 +55,7 @@ const Dashboard = () => {
     concluidas: atividades?.filter(a => a.status === 'concluida')?.length || 0,
     pendentes: atividades?.filter(a => a.status === 'pendente')?.length || 0,
     progresso: atividades?.length ? Math.round((atividades.filter(a => a.status === 'concluida').length / atividades.length) * 100) : 0,
-    horas: 0
+    horas: 0 // TODO: Calculate from cronograma when implemented
   }
 
   return (

@@ -1,99 +1,135 @@
 const pool = require('../config/db');
-const { obterPerfilPorUsuario, obterDisponibilidade } = require('../models/perfilEstudoModel');
+const perfilModel = require('../models/perfilEstudoModel');
+const dispModel = require('../models/disponibilidadeSemanaModel');
+const cronogramaModel = require('../models/cronogramaModel');
+const cronogramaDiaModel = require('../models/cronogramaDiaModel');
+const cronogramaConteudoModel = require('../models/cronogramaConteudoModel');
 const conteudoModel = require('../models/conteudoModel');
 
 class CronogramaService {
+  /**
+   * Gera cronograma para um usuário baseado em seu perfil
+   */
   async gerar(usuarioId) {
-    // Obtém perfil e disponibilidade do usuário
-    const perfil = await obterPerfilPorUsuario(usuarioId);
-    const disponibilidade = await obterDisponibilidade(usuarioId);
-    
+    // Obtém perfil do usuário
+    const perfil = await perfilModel.obterPerfilPorUsuario(usuarioId);
     if (!perfil) {
       throw new Error('Perfil de estudo não configurado');
     }
 
-    // Lógica "AI" - distribui matérias por dia baseado em disponibilidade
-    const materias = ['Matemática', 'Português', 'Biologia', 'Física', 'Química', 'História'];
-    const diasSemana = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    
-    const cronograma = diasSemana.map((dia, index) => {
-      // Pula dias ocupados
-      const diaDisp = disponibilidade.find(d => d.dia_semana === index + 1);
-      if (diaDisp && diaDisp.ocupado) {
-        return null;
-      }
-
-      // Distribui 2-3 matérias por dia
-      const materiasDia = [];
-      const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
-      const topicosPorMateria = ['Funções', 'Equações', 'Geometria', 'Interpretação', 'Gramática', 'Redação'];
-
-      for (let i = 0; i < Math.floor(perfil.horas_diarias / 2); i++) {
-        const materiaAleatoria = shuffle(materias.slice())[0];
-        const topicoAleatorio = shuffle(topicosPorMateria.slice())[0];
-        materiasDia.push({ materia: materiaAleatoria, topico: topicoAleatorio });
-      }
-
-      return {
-        dia_semana: dia,
-        data: new Date(Date.now() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-        atividades: materiasDia,
-        duracao: perfil.horas_diarias,
-        concluido: false
-      };
-    }).filter(Boolean);
-
-    // Salva no banco
-    return await this.salvarCronograma(usuarioId, cronograma);
-  }
-
-  async salvarCronograma(usuarioId, cronograma) {
-    // Limpa cronogramas antigos
-    await pool.execute('DELETE FROM cronogramas WHERE usuario_id = ?', [usuarioId]);
-
-    // Salva novo
-    const [result] = await pool.execute(
-      'INSERT INTO cronogramas (usuario_id, titulo, data_inicio, data_fim) VALUES (?, ?, ?, ?)',
-      [usuarioId, 'Cronograma Semanal IA', cronograma[0].data, cronograma[cronograma.length - 1].data]
-    );
-
-    const cronogramaId = result.insertId;
-    
-    for (const dia of cronograma) {
-      const [diaResult] = await pool.execute(
-        'INSERT INTO cronograma_dias (cronograma_id, data_estudo) VALUES (?, ?)',
-        [cronogramaId, dia.data]
-      );
-
-      for (const atividade of dia.atividades) {
-        await pool.execute(
-          'INSERT INTO cronograma_conteudos (dia_id, conteudo_id, materia, topico, concluido) VALUES (?, ?, ?, ?, ?)',
-          [diaResult.insertId, null, atividade.materia, atividade.topico, false]
-        );
-      }
+    // Obtém disponibilidade
+    const disponibilidade = await dispModel.obterDisponibilidadePorUsuario(usuarioId);
+    if (!disponibilidade || disponibilidade.length === 0) {
+      throw new Error('Disponibilidade semanal não configurada');
     }
 
-    return { id: cronogramaId, dias: cronograma };
+    // Busca conteúdos relevantes
+    const areas = perfil.areas_foco ? perfil.areas_foco.split(',').map(a => a.trim()) : ['Geral'];
+    const conteudos = [];
+    for (const area of areas) {
+      const items = await conteudoModel.buscarRelevantes(area);
+      conteudos.push(...items);
+    }
+
+    if (conteudos.length === 0) {
+      throw new Error('Nenhum conteúdo cadastrado para as áreas de foco informadas');
+    }
+
+    // Calcula datas
+    const hoje = new Date();
+    const dataFim = new Date(hoje);
+    dataFim.setDate(dataFim.getDate() + (perfil.prazo_estimado || 30));
+
+    // Cria cronograma
+    const cronograma = await cronogramaModel.criarCronograma(perfil.id_perfil, {
+      data_inicio: hoje.toISOString().split('T')[0],
+      data_fim: dataFim.toISOString().split('T')[0],
+      status: 'ativo'
+    });
+
+    // Dias disponíveis por semana
+    const diasDisponiveis = disponibilidade
+      .filter(d => !d.ocupado)
+      .map(d => d.dia_semana);
+
+    if (diasDisponiveis.length === 0) {
+      throw new Error('Nenhum dia disponível para estudo foi configurado');
+    }
+
+    // Mapeamento de dia da semana para número
+    const diasSemana = {
+      'domingo': 0,
+      'segunda': 1,
+      'terca': 2,
+      'quarta': 3,
+      'quinta': 4,
+      'sexta': 5,
+      'sabado': 6
+    };
+
+    // Distribui conteúdos ao longo dos dias
+    let dataAtual = new Date(hoje);
+    let indiceConteudo = 0;
+    const diasParaGerar = perfil.prazo_estimado || 30;
+    const tempoParaAlmoco = 60; // minutos
+
+    for (let i = 0; i < diasParaGerar; i++) {
+      const nomeDia = Object.keys(diasSemana).find(k => diasSemana[k] === dataAtual.getDay());
+
+      if (diasDisponiveis.includes(nomeDia)) {
+        const dia = await cronogramaDiaModel.criarDia(cronograma.id_cronograma, {
+          data_estudo: dataAtual.toISOString().split('T')[0],
+          tempo_previsto: perfil.tempo_diario_min || 120
+        });
+
+        // Atribui conteúdos ao dia
+        const quantidadeSlots = Math.max(1, Math.floor((perfil.tempo_diario_min || 120) / 30));
+        for (let s = 0; s < quantidadeSlots && conteudos.length > 0; s++) {
+          const conteudo = conteudos[indiceConteudo % conteudos.length];
+          await cronogramaConteudoModel.atribuirConteudoAoDia(dia.id_dia, conteudo.id_conteudo);
+          indiceConteudo++;
+        }
+      }
+
+      dataAtual.setDate(dataAtual.getDate() + 1);
+    }
+
+    return cronogramaModel.obterCronogramaCompleto(cronograma.id_cronograma);
   }
 
+  /**
+   * Lista cronogramas de um usuário
+   */
   async listar(usuarioId) {
-    const [rows] = await pool.execute(
-      `SELECT c.*, cd.data_estudo, GROUP_CONCAT(CONCAT(cc.materia, ': ', cc.topico) SEPARATOR ' | ') as atividades
-       FROM cronogramas c
-       LEFT JOIN cronograma_dias cd ON c.id = cd.cronograma_id
-       LEFT JOIN cronograma_conteudos cc ON cd.id = cc.dia_id
-       WHERE c.usuario_id = ? 
-       GROUP BY c.id, cd.id
-       ORDER BY cd.data_estudo`
-    );
-    return rows;
+    const perfil = await perfilModel.obterPerfilPorUsuario(usuarioId);
+    if (!perfil) {
+      return [];
+    }
+
+    const cronogramas = await cronogramaModel.listarCronogramasPorPerfil(perfil.id_perfil);
+    
+    // Enriquece cada cronograma com dados de dias
+    for (const cronograma of cronogramas) {
+      const dias = await cronogramaDiaModel.listarDiasPorCronograma(cronograma.id_cronograma);
+      cronograma.dias = dias;
+    }
+
+    return cronogramas;
   }
 
-  async marcarConcluido(diaId) {
-    await pool.execute(
-      'UPDATE cronograma_conteudos SET concluido = 1 WHERE dia_id = ?',
-      [diaId]
-    );
+  /**
+   * Marca um dia como concluído
+   */
+  async marcarConcluido(idDia) {
+    await cronogramaConteudoModel.marcarTodosConcluidos(idDia);
+    return { id_dia: idDia, status: 'concluído' };
+  }
+
+  /**
+   * Atualiza status do cronograma
+   */
+  async atualizarStatus(idCronograma, status) {
+    return await cronogramaModel.atualizarStatusCronograma(idCronograma, status);
   }
 }
 

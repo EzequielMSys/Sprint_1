@@ -5,6 +5,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import PrimeiroAcesso from './pages/PrimeiroAcesso'
+import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import Cronograma from './pages/Cronograma'
 import Perfil from './pages/Perfil'
@@ -26,6 +27,7 @@ function App() {
         <Route element={<Layout />}>
           <Route element={<ProtectedRoute />}>
             <Route path="/primeiro-acesso" element={<PrimeiroAcesso />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/inicio" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/cronograma" element={<Cronograma />} />

@@ -1,61 +1,97 @@
 const pool = require('../config/db');
-async function criarCronograma(usuarioId, { titulo, data_inicio, data_fim }) {
+
+/**
+ * Cria novo cronograma para um perfil
+ */
+async function criarCronograma(idPerfil, { data_inicio, data_fim, status = 'ativo' }) {
   const [result] = await pool.execute(
-    `INSERT INTO cronogramas (usuario_id, titulo, data_inicio, data_fim)
+    `INSERT INTO cronogramas (id_perfil, data_inicio, data_fim, status)
      VALUES (?, ?, ?, ?)`,
-    [usuarioId, titulo, data_inicio, data_fim]
+    [idPerfil, data_inicio, data_fim, status]
   );
-  return { id: result.insertId, usuario_id: usuarioId, titulo, data_inicio, data_fim };
+  return { id_cronograma: result.insertId, id_perfil: idPerfil, data_inicio, data_fim, status };
 }
-async function listarCronogramasPorUsuario(usuarioId) {
+
+/**
+ * Lista cronogramas por perfil
+ */
+async function listarCronogramasPorPerfil(idPerfil) {
   const [rows] = await pool.execute(
-    'SELECT * FROM cronogramas WHERE usuario_id = ? ORDER BY criado_em DESC',
-    [usuarioId]
+    'SELECT * FROM cronogramas WHERE id_perfil = ? ORDER BY criado_em DESC',
+    [idPerfil]
   );
   return rows;
 }
-async function criarDia(cronogramaId, data_estudo) {
-  const [result] = await pool.execute(
-    'INSERT INTO cronograma_dias (cronograma_id, data_estudo) VALUES (?, ?)',
-    [cronogramaId, data_estudo]
+
+/**
+ * Obtém cronograma por ID
+ */
+async function obterCronogramaPorId(idCronograma) {
+  const [rows] = await pool.execute(
+    'SELECT * FROM cronogramas WHERE id_cronograma = ?',
+    [idCronograma]
   );
-  return { id: result.insertId, cronograma_id: cronogramaId, data_estudo };
+  return rows[0];
 }
-async function atribuirConteudoAoDia(diaId, conteudoId) {
-  const [result] = await pool.execute(
-    'INSERT INTO cronograma_conteudos (dia_id, conteudo_id) VALUES (?, ?)',
-    [diaId, conteudoId]
+
+/**
+ * Atualiza status do cronograma
+ */
+async function atualizarStatusCronograma(idCronograma, status) {
+  await pool.execute(
+    'UPDATE cronogramas SET status = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id_cronograma = ?',
+    [status, idCronograma]
   );
-  return { id: result.insertId, dia_id: diaId, conteudo_id: conteudoId };
+  return { id_cronograma: idCronograma, status };
 }
-async function obterCronogramaCompleto(usuarioId) {
+
+/**
+ * Deleta cronograma
+ */
+async function deletarCronograma(idCronograma) {
+  await pool.execute(
+    'DELETE FROM cronogramas WHERE id_cronograma = ?',
+    [idCronograma]
+  );
+}
+
+/**
+ * Legacy function: obtém cronograma completo com dias e conteúdos
+ * Mantido para backward compatibility com código existente
+ */
+async function obterCronogramaCompleto(idCronograma) {
   const [cronogramas] = await pool.execute(
-    'SELECT * FROM cronogramas WHERE usuario_id = ? ORDER BY criado_em DESC',
-    [usuarioId]
+    'SELECT * FROM cronogramas WHERE id_cronograma = ?',
+    [idCronograma]
   );
   if (cronogramas.length === 0) return null;
+
   const cronograma = cronogramas[0];
   const [dias] = await pool.execute(
-    'SELECT * FROM cronograma_dias WHERE cronograma_id = ? ORDER BY data_estudo ASC',
-    [cronograma.id]
+    'SELECT * FROM cronograma_dias WHERE id_cronograma = ? ORDER BY data_estudo ASC',
+    [cronograma.id_cronograma]
   );
+
   for (const dia of dias) {
     const [conteudos] = await pool.execute(
       `SELECT cc.id, cc.concluido, c.*
        FROM cronograma_conteudos cc
-       JOIN conteudos c ON c.id = cc.conteudo_id
-       WHERE cc.dia_id = ?`,
-      [dia.id]
+       LEFT JOIN conteudos c ON c.id_conteudo = cc.id_conteudo
+       WHERE cc.id_dia = ?`,
+      [dia.id_dia]
     );
     dia.conteudos = conteudos;
   }
+
   cronograma.dias = dias;
   return cronograma;
 }
+
 module.exports = {
   criarCronograma,
-  listarCronogramasPorUsuario,
-  criarDia,
-  atribuirConteudoAoDia,
+  listarCronogramasPorPerfil,
+  obterCronogramaPorId,
+  atualizarStatusCronograma,
+  deletarCronograma,
   obterCronogramaCompleto
 };

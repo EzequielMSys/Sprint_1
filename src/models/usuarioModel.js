@@ -33,7 +33,9 @@ async function buscarPorEmail(email) {
         tipo, 
         ativo, 
         senha_temporaria, 
-        ultimo_login 
+        ultimo_login,
+        apelido,
+        foto_url
      FROM usuarios 
      WHERE email = ?`,
     [email]
@@ -51,7 +53,9 @@ async function buscarPorEmailSimples(email) {
         nome, 
         email, 
         tipo, 
-        data_criacao 
+        data_criacao,
+        apelido,
+        foto_url
      FROM usuarios 
      WHERE email = ?`,
     [email]
@@ -74,7 +78,9 @@ async function buscarPorIdCompleto(id) {
         ativo, 
         senha_temporaria, 
         ultimo_login, 
-        atualizado_em 
+        atualizado_em,
+        apelido,
+        foto_url
      FROM usuarios 
      WHERE id_usuario = ?`,
     [id]
@@ -92,7 +98,9 @@ async function buscarPorId(id) {
         nome, 
         email, 
         tipo, 
-        data_criacao 
+        data_criacao,
+        apelido,
+        foto_url
      FROM usuarios 
      WHERE id_usuario = ?`,
     [id]
@@ -114,7 +122,9 @@ async function listarUsuarios() {
         ativo, 
         senha_temporaria, 
         ultimo_login, 
-        atualizado_em 
+        atualizado_em,
+        apelido,
+        foto_url
      FROM usuarios 
      ORDER BY nome`
   );
@@ -125,13 +135,13 @@ async function listarUsuarios() {
  * Atualiza dados do usuário
  */
 async function atualizarUsuario(id, dados) {
-  const { nome, email, tipo } = dados;
+  const { nome, email, tipo, apelido, foto_url } = dados;
 
   await pool.execute(
     `UPDATE usuarios 
-     SET nome = ?, email = ?, tipo = ?, atualizado_em = CURRENT_TIMESTAMP
+     SET nome = ?, email = ?, tipo = ?, apelido = ?, foto_url = ?, atualizado_em = CURRENT_TIMESTAMP
      WHERE id_usuario = ?`,
-    [nome, email, tipo, id]
+    [nome, email, tipo, apelido || null, foto_url || null, id]
   );
 
   return { id, ...dados };
