@@ -84,10 +84,10 @@ const Register = () => {
 
     setLoading(true)
     try {
-      await authService.register({
+await authService.register({
         nome: formData.nome,
         email: formData.email,
-        tipo: formData.tipo,
+        tipo: 'aluno', // Forçar sempre aluno - registro público não permite admin
         senha: formData.senha
       })
       toast.success('Conta criada com sucesso!')

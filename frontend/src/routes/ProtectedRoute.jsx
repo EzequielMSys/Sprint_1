@@ -15,7 +15,9 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (isPrimeiroAcesso) {
+  const isPrimeiroAcessoRoute = location.pathname === '/primeiro-acesso'
+
+  if (isPrimeiroAcesso && !isPrimeiroAcessoRoute) {
     return <Navigate to="/primeiro-acesso" replace />
   }
 
@@ -27,4 +29,3 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 }
 
 export default ProtectedRoute
-

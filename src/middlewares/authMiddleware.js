@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+
 function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
@@ -16,13 +17,23 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ message: 'Token inválido ou expirado.' });
   }
 }
-function isAdmin(req, res, next) {
-  if (req.usuario && req.usuario.tipo === 'admin') {
+
+function isAdminOrDono(req, res, next) {
+  if (req.usuario && (req.usuario.tipo === 'admin' || req.usuario.tipo === 'dono')) {
     return next();
   }
   return res.status(403).json({ message: 'Acesso restrito a administradores.' });
 }
+
+function isDono(req, res, next) {
+  if (req.usuario && req.usuario.tipo === 'dono') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Acesso restrito ao dono do sistema.' });
+}
+
 module.exports = {
   authMiddleware,
-  isAdmin
+  isAdminOrDono,
+  isDono
 };

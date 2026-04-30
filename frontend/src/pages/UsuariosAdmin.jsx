@@ -2,6 +2,26 @@ import { useState, useEffect } from 'react'
 import usuarioService from '../services/usuarioService'
 import { toast } from 'react-hot-toast'
 
+const tipoBadge = {
+  dono: 'bg-purple-600/20 text-purple-300 border-purple-400/30',
+  admin: 'bg-purple-500/20 text-purple-400 border-purple-400/30',
+  docente: 'bg-indigo-500/20 text-indigo-400 border-indigo-400/30',
+  aluno: 'bg-blue-500/20 text-blue-400 border-blue-400/30'
+}
+
+const tipoLabel = {
+  dono: 'Dono',
+  admin: 'Admin',
+  docente: 'Docente',
+  aluno: 'Aluno'
+}
+
+const formatarData = (dataStr) => {
+  if (!dataStr) return '-'
+  const data = new Date(dataStr)
+  return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 const UsuariosAdmin = () => {
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,7 +39,7 @@ const UsuariosAdmin = () => {
       const data = await usuarioService.listar()
       setUsuarios(data)
     } catch (error) {
-      toast.error('Erro ao carregar usuários')
+      toast.error('Erro ao carregar usuarios')
     } finally {
       setLoading(false)
     }
@@ -37,11 +57,21 @@ const UsuariosAdmin = () => {
   const handleSalvarEdicao = async (id) => {
     try {
       await usuarioService.atualizar(id, formData)
-      toast.success('Usuário atualizado!')
+      toast.success('Usuario atualizado!')
       carregarUsuarios()
       setEditingUser(null)
     } catch (error) {
       toast.error(error.response?.data?.error || 'Erro ao atualizar')
+    }
+  }
+
+  const handleAlterarTipo = async (id, novoTipo) => {
+    try {
+      await usuarioService.alterarTipo(id, novoTipo)
+      toast.success('Tipo alterado!')
+      carregarUsuarios()
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Erro ao alterar tipo')
     }
   }
 
@@ -56,11 +86,12 @@ const UsuariosAdmin = () => {
   }
 
   const handleResetSenha = async (id) => {
-    if (!confirm('Redefinir senha para este usuário?')) return
+    if (!confirm('Redefinir senha para este usuario?')) return
     
     try {
-      await usuarioService.resetarSenha(id)
-      toast.success('Senha redefinida! Nova temp senha mostrada no console')
+      const result = await usuarioService.resetarSenha(id)
+      alert(`Senha temporaria gerada: ${result.senha_temporaria}`)
+      toast.success('Senha redefinida!')
       carregarUsuarios()
     } catch (error) {
       toast.error('Erro ao resetar senha')
@@ -79,7 +110,7 @@ const UsuariosAdmin = () => {
       <div className="min-h-screen flex items-center justify-center pt-20">
         <div className="card p-12 text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-textPrimary font-semibold">Carregando usuários...</p>
+          <p className="text-textPrimary font-semibold">Carregando usuarios...</p>
         </div>
       </div>
     )
@@ -91,10 +122,10 @@ const UsuariosAdmin = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-12 gap-6">
           <div>
             <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-2">
-              Gerenciar Usuários
+              Gerenciar Usuarios
             </h1>
             <p className="text-xl text-textSecondary">
-              Administre contas dos alunos e professores
+              Administre contas de alunos, docentes e administradores
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -113,13 +144,14 @@ const UsuariosAdmin = () => {
               onChange={(e) => setFiltro({...filtro, tipo: e.target.value})}
             >
               <option value="">Todos</option>
-              <option value="aluno">Aluno</option>
+              <option value="dono">Dono</option>
               <option value="admin">Admin</option>
+              <option value="docente">Docente</option>
+              <option value="aluno">Aluno</option>
             </select>
           </div>
         </div>
 
-        {/* Tabela */}
         <div className="card overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -129,7 +161,9 @@ const UsuariosAdmin = () => {
                   <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Email</th>
                   <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Tipo</th>
                   <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Status</th>
-                  <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Ações</th>
+                  <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Cadastro</th>
+                  <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Ultimo Login</th>
+                  <th className="text-left p-6 text-textPrimary font-semibold text-lg border-b border-white/10">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -161,13 +195,28 @@ const UsuariosAdmin = () => {
                       )}
                     </td>
                     <td className="p-6">
-                      <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                        usuario.tipo === 'admin' 
-                          ? 'bg-purple-500/20 text-purple-400 border-purple-400/30 border' 
-                          : 'bg-blue-500/20 text-blue-400 border-blue-400/30 border'
-                      }`}>
-                        {usuario.tipo === 'admin' ? 'Admin' : 'Aluno'}
-                      </span>
+                      {editingUser?.id === usuario.id ? (
+                        <select
+                          value={formData.tipo}
+                          onChange={(e) => setFormData({...formData, tipo: e.target.value})}
+                          className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-textPrimary text-sm"
+                        >
+                          <option value="dono">Dono</option>
+                          <option value="admin">Admin</option>
+                          <option value="docente">Docente</option>
+                          <option value="aluno">Aluno</option>
+                        </select>
+                      ) : (
+                        <select
+                          value={usuario.tipo}
+                          onChange={(e) => handleAlterarTipo(usuario.id, e.target.value)}
+                          className={`px-4 py-2 rounded-full text-sm font-semibold border bg-transparent cursor-pointer ${tipoBadge[usuario.tipo] || tipoBadge.aluno}`}
+                        >
+                          {Object.entries(tipoLabel).map(([key, label]) => (
+                            <option key={key} value={key} className="bg-gray-900 text-textPrimary">{label}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="p-6">
                       <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
@@ -177,6 +226,12 @@ const UsuariosAdmin = () => {
                       }`}>
                         {usuario.ativo ? 'Ativo' : 'Inativo'}
                       </span>
+                    </td>
+                    <td className="p-6 text-textSecondary text-sm">
+                      {formatarData(usuario.data_criacao)}
+                    </td>
+                    <td className="p-6 text-textSecondary text-sm">
+                      {formatarData(usuario.ultimo_login)}
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-2">
@@ -245,14 +300,14 @@ const UsuariosAdmin = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-textPrimary mb-2">Nenhum usuário encontrado</h3>
+              <h3 className="text-2xl font-bold text-textPrimary mb-2">Nenhum usuario encontrado</h3>
               <p className="text-textSecondary">Tente ajustar os filtros de busca</p>
             </div>
           )}
         </div>
 
         <div className="text-sm text-textSecondary mt-8 text-center">
-          Total: <span className="font-semibold text-textPrimary">{usuarios.length}</span> usuários
+          Total: <span className="font-semibold text-textPrimary">{usuarios.length}</span> usuarios
         </div>
       </div>
     </div>
@@ -260,4 +315,3 @@ const UsuariosAdmin = () => {
 }
 
 export default UsuariosAdmin
-

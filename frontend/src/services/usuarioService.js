@@ -1,4 +1,4 @@
-import axios from 'axios'
+ import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
 const API_BASE = '/api/usuarios'
@@ -32,6 +32,12 @@ export const usuarioService = {
     return response.data
   },
 
+  async alterarTipo(id, tipo) {
+    const response = await api.patch(`/${id}/tipo`, { tipo })
+    toast.success(response.data.message)
+    return response.data
+  },
+
   async alterarStatus(id, ativo) {
     const response = await api.patch(`/${id}/status`, { ativo })
     toast.success(response.data.message)
@@ -46,4 +52,3 @@ export const usuarioService = {
 }
 
 export default usuarioService
-

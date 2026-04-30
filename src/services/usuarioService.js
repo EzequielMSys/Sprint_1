@@ -17,21 +17,32 @@ class UsuarioService {
 
   async atualizar(id, dados, usuarioLogado) {
     const { nome, email, tipo } = dados;
+    const podeGerenciar = usuarioLogado.tipo === 'admin' || usuarioLogado.tipo === 'dono';
 
-    // Só admin pode alterar tipo de outros usuários
-    if (id != usuarioLogado.id && (!usuarioLogado.isAdmin || tipo)) {
-      throw new Error('Permissão negada para alterar tipo');
+    if (tipo && !podeGerenciar) {
+      throw new Error('Permissao negada para alterar tipo');
     }
 
-    // Se alterando email próprio, verifica unicidade
+    if (id != usuarioLogado.id && !podeGerenciar) {
+      throw new Error('Permissao negada para editar outro usuario');
+    }
+
     if (email && id == usuarioLogado.id) {
       const usuarioExistente = await usuarioModel.buscarPorEmail(email);
       if (usuarioExistente && usuarioExistente.id != id) {
-        throw new Error('Email já em uso');
+        throw new Error('Email ja em uso');
       }
     }
 
     return await usuarioModel.atualizarUsuario(id, { nome, email, tipo });
+  }
+
+  async alterarTipo(id, tipo, usuarioLogado) {
+    const podeGerenciar = usuarioLogado.tipo === 'admin' || usuarioLogado.tipo === 'dono';
+    if (!podeGerenciar) {
+      throw new Error('Permissao negada para alterar tipo');
+    }
+    return await usuarioModel.atualizarUsuario(id, { tipo });
   }
 
   async ativarDesativar(id, ativo) {
@@ -50,4 +61,3 @@ class UsuarioService {
 }
 
 module.exports = new UsuarioService();
-
